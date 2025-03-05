@@ -1,0 +1,11 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/MarkovChain/.vs/MarkovChain
+/MarkovChain/x64/Debug
+/MarkovChain/MarkovChain.sln
+/MarkovChain/MarkovChain.vcxproj
+/MarkovChain/MarkovChain.vcxproj.filters
+/MarkovChain/MarkovChain.vcxproj.user
