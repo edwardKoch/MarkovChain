@@ -65,6 +65,7 @@ void MarkovChain::train(std::string fileName)
                 }
             }
         }
+
         file.close();
         std::cout << "Training Complete" << std::endl;
     }
@@ -83,6 +84,9 @@ std::string MarkovChain::predict(std::string question)
         return "Error! Try Asking Again!";
     }
 
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+
     std::string response = question;
 
     std::string currGram = " ";
@@ -92,6 +96,7 @@ std::string MarkovChain::predict(std::string question)
     StringVec::iterator jtr = itr;
     std::string gram = "";
     std::string next = "";
+    StrFreqMap::iterator ftr;
 
     // Until I am satisfied with the answer...
     while (response.at(response.length() - 2) != '.' 
@@ -131,9 +136,31 @@ std::string MarkovChain::predict(std::string question)
             {
                 found = true;
 
-                // Get a Random next word from the possibilities
-                StringVec* possibilities = &gtr->second;
-                next = *select_randomly(possibilities->begin(), possibilities->end());
+                // Get a random value between 0 and all weights
+                std::uniform_int_distribution<uint64_t> dis(0, gtr->second.sumOfWeights);
+                uint64_t selection = dis(gen);
+                uint64_t value = 0;
+                // Loop through next words until the weighted random word is chosen
+                ftr = gtr->second.gramFreq.begin();
+
+                for (ftr; ftr != gtr->second.gramFreq.end(); ++ftr)
+                {
+                    value += ftr->second;
+
+                    if (value >= selection)
+                    {
+                        next = ftr->first;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    // get last word in frequency distribution
+                    next = (gtr->second.gramFreq.end()->first);
+                    found = true;
+                }
             }
         }
 
@@ -141,8 +168,9 @@ std::string MarkovChain::predict(std::string question)
         if (!found)
         {
             nGramType::iterator randomNGram = select_randomly(nGrams.begin(), nGrams.end());
-            next = *select_randomly(randomNGram->second.begin(), randomNGram->second.end());
+            next = (randomNGram->second.gramFreq.begin()->first);
         }
+
         if (count == 1)
         {
             response = gram + " " + next + " ";
@@ -250,6 +278,7 @@ bool MarkovChain::digestLine(std::string line)
     StringVec::iterator itr = tempStringVec.begin();
     StringVec::iterator jtr = itr;
     std::string gram = "";
+    std::string nextGram = "";
 
     // For all words in string
     for (itr; itr != tempStringVec.end() - 1; itr++)
@@ -277,19 +306,36 @@ bool MarkovChain::digestLine(std::string line)
                     gram += *jtr;
                 }
 
+                // Get gram to insert
+                nextGram = *(itr + i);
+
                 // Check if Gram exists
                 nGramType::iterator gtr = nGrams.find(gram);
 
                 // If Gram Exists
                 if (gtr != nGrams.end())
                 {
-                    // Limit size of Gram vectors
-                    if (gtr->second.size() < GRAM_VALUE_LIMIT)
+                    NextWord* nextWords = &(gtr->second);
+
+                    // Check if next gram exists
+                    StrFreqMap::iterator ntr = nextWords->gramFreq.find(nextGram);
+
+                    if (ntr != nextWords->gramFreq.end())
                     {
-                        // If there is enough room, get next word
-                        gtr->second.push_back(*(itr + i));
-                        dataAdded = true;
+                        ++(ntr->second);
+                        ++nextWords->sumOfWeights;
                     }
+                    else
+                    {
+                        // Limit size of Gram vectors
+                        if (nextWords->gramFreq.size() < GRAM_VALUE_LIMIT)
+                        {
+                            // If there is enough room, get next word
+                            nextWords->gramFreq[nextGram] = 1;
+                            ++nextWords->sumOfWeights;
+                        }
+                    }
+
                 }
                 // if Gram does not exist
                 else
@@ -299,13 +345,13 @@ bool MarkovChain::digestLine(std::string line)
                     {
                         // Insert and assign new Gram
                         // Get next word based on current gram
-                        nGrams[gram].push_back(*(itr + i));
-                        dataAdded = true;
+                        nGrams[gram].gramFreq[nextGram] = 1;
+                        nGrams[gram].sumOfWeights = 1;
                     }
                 }
             }
         }
     }
 
-    return dataAdded;
+    return true;
 }

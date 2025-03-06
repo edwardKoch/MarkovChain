@@ -6,8 +6,7 @@ int main()
 {
     MarkovChain chatGPT(3);
 
-    //chatGPT.train("Unicorns.txt");
-
+    chatGPT.train("Unicorns.txt");
 
     //std::cout << chatGPT.predict("The unicorn").c_str() << std::endl;
 

@@ -16,6 +16,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include  <random>
 
 class MarkovChain
 {
@@ -32,11 +33,21 @@ private:
 
     uint16_t order;
 
-    typedef std::vector<std::string> StringVec;
+    typedef std::map<std::string, uint32_t> StrFreqMap;
+    struct NextWord
+    {
+        // Frequency of next words
+        StrFreqMap gramFreq;
 
-    typedef std::map<std::string, StringVec> nGramType;
+        // Total of all frequencies in gramFreq
+        // used for weighted random selection
+        uint64_t sumOfWeights;
+    };
+
+    typedef std::map<std::string, NextWord> nGramType;
     nGramType nGrams;
 
+    typedef std::vector<std::string> StringVec;
     StringVec tempStringVec;
 
     void splitString(std::string sentence);
