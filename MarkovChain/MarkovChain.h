@@ -27,6 +27,9 @@ public:
     std::string predict(std::string question);
 
 private:
+    static const uint32_t GRAM_KEY_LIMIT = 100000;
+    static const uint32_t GRAM_VALUE_LIMIT = 500;
+
     uint16_t order;
 
     typedef std::vector<std::string> StringVec;
@@ -38,7 +41,9 @@ private:
 
     void splitString(std::string sentence);
 
-    void digestLine(std::string line);
+    void sanitizeTempStringVec();
+
+    bool digestLine(std::string line);
 };
 
 #endif

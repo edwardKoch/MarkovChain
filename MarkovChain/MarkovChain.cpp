@@ -53,15 +53,20 @@ void MarkovChain::train(std::string fileName)
 
     if (file.is_open()) 
     {
+        std::cout << "Training on File " << fileName << "..." << std::endl;
         std::string line;
         while (std::getline(file, line)) 
         {
             if (line.length() > 0)
             {
-                digestLine(line);
+                if (!digestLine(line))
+                {
+                    break;
+                }
             }
         }
         file.close();
+        std::cout << "Training Complete" << std::endl;
     }
     else 
     {
@@ -89,7 +94,7 @@ std::string MarkovChain::predict(std::string question)
     std::string next = "";
 
     // Until I am satisfied with the answer...
-    while (response.at(response.length() - 1) != '.' 
+    while (response.at(response.length() - 2) != '.' 
            && count++ < 100)
     {
         // Track if a next word has been found
@@ -164,10 +169,82 @@ void MarkovChain::splitString(std::string sentence)
                          std::istream_iterator<std::string>());
 }
 
-void MarkovChain::digestLine(std::string line)
+void MarkovChain::sanitizeTempStringVec()
 {
+    // All alphabetical characters and the following are considered "valid"
+    static const uint8_t numChars = 22;
+    static char validChars[numChars] =
+    {
+        ' ', '!', '"', '\'', '(', ')', ',', '.', '-',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        ':', ';', '?'
+    };
+
+    StringVec::iterator itr = tempStringVec.begin();
+    for (itr; itr != tempStringVec.end(); /*NoOp*/)
+    {
+        bool wordValid = true;
+        bool charValid = true;
+
+        // Check if word is "valid"
+        std::string* word = &(*itr);
+
+        for (int idx = 0; idx < word->length(); ++idx)
+        {
+            charValid = false;
+
+            char c = word->at(idx);
+
+            if ((c >= 'A' && c <= 'Z') ||
+                (c >= 'a' && c <= 'z'))
+            {
+                charValid = true;
+                continue;
+            }
+
+            for (int i = 0; i < numChars; ++i)
+            {
+                if (c == validChars[i])
+                {
+                    charValid = true;
+                    break;
+                }
+            }
+
+            if (charValid)
+            {
+                continue;
+            }
+
+            wordValid = false;
+        }
+
+        if (wordValid)
+        {
+            ++itr;
+        }
+        else
+        {
+            itr = tempStringVec.erase(itr);
+        }
+    }
+
+}
+
+bool MarkovChain::digestLine(std::string line)
+{
+    bool dataAdded = false;
     // Split intput string into vector of words
     splitString(line);
+
+    // Remove words with invalid characters
+    sanitizeTempStringVec();
+
+    if (tempStringVec.size() == 0)
+    {
+        // Do not count invalid lines as no data added lines
+        return true;
+    }
 
     // Add nGrams up to order
     StringVec::iterator itr = tempStringVec.begin();
@@ -200,9 +277,35 @@ void MarkovChain::digestLine(std::string line)
                     gram += *jtr;
                 }
 
-                // Get next word based on current gram
-                nGrams[gram].push_back(*(itr + i));
+                // Check if Gram exists
+                nGramType::iterator gtr = nGrams.find(gram);
+
+                // If Gram Exists
+                if (gtr != nGrams.end())
+                {
+                    // Limit size of Gram vectors
+                    if (gtr->second.size() < GRAM_VALUE_LIMIT)
+                    {
+                        // If there is enough room, get next word
+                        gtr->second.push_back(*(itr + i));
+                        dataAdded = true;
+                    }
+                }
+                // if Gram does not exist
+                else
+                {
+                    // Limit number of Grams
+                    if (nGrams.size() < GRAM_KEY_LIMIT)
+                    {
+                        // Insert and assign new Gram
+                        // Get next word based on current gram
+                        nGrams[gram].push_back(*(itr + i));
+                        dataAdded = true;
+                    }
+                }
             }
         }
     }
+
+    return dataAdded;
 }
