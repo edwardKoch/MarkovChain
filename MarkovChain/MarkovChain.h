@@ -28,8 +28,8 @@ public:
     std::string predict(std::string question);
 
 private:
-    static const uint32_t GRAM_KEY_LIMIT = 100000;
-    static const uint32_t GRAM_VALUE_LIMIT = 500;
+    static const uint32_t GRAM_KEY_LIMIT = UINT32_MAX;// 100000;
+    static const uint32_t GRAM_VALUE_LIMIT = UINT32_MAX;// 500;
 
     uint16_t order;
 

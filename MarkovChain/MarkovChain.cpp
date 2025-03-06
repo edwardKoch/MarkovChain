@@ -64,6 +64,12 @@ void MarkovChain::train(std::string fileName)
                     break;
                 }
             }
+
+            // If there are ever more than 50,000,000 nGrams, break out
+            if (nGrams.size() > 50000000)
+            {
+                break;
+            }
         }
 
         file.close();
