@@ -22,17 +22,23 @@ class MarkovChain
 public:
     MarkovChain(uint16_t n);
 
-    void train(std::string trainingText);
+    void train(std::string fileName);
 
     std::string predict(std::string question);
 
 private:
     uint16_t order;
 
-    typedef std::map<std::string, std::vector<std::string>> nGramType;
+    typedef std::vector<std::string> StringVec;
+
+    typedef std::map<std::string, StringVec> nGramType;
     nGramType nGrams;
 
+    StringVec tempStringVec;
 
+    void splitString(std::string sentence);
+
+    void digestLine(std::string line);
 };
 
 #endif
